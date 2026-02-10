@@ -2,7 +2,7 @@
 
 A React application that compares geocoding results from Google Geocoding API and Nominatim (OpenStreetMap).
 
-[screenshot](./public/localhost_5173_.png)
+![screenshot](./public/localhost_5173_.png)
 
 
 ## Features
