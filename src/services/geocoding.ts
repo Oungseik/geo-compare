@@ -26,10 +26,19 @@ export async function geocodeWithGoogle(
 	const query = `${input.address}, ${input.city}, ${input.postalCode}, ${input.country}`;
 	const encodedQuery = encodeURIComponent(query);
 
-	const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedQuery}&key=${apiKey}`;
+	// Narrow the search using components to reduce ambiguous matches.
+	const components = [`country:${encodeURIComponent(input.country)}`];
+	if (input.postalCode) components.push(`postal_code:${encodeURIComponent(input.postalCode)}`);
+
+	const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodedQuery}&components=${components.join("|")}&language=en&key=${apiKey}`;
 
 	try {
 		const response = await fetch(url);
+
+		if (!response.ok) {
+			throw new Error(`Google API HTTP ${response.status}`);
+		}
+
 		const data = await response.json();
 
 		if (data.status === "OK" && data.results.length > 0) {
@@ -44,7 +53,9 @@ export async function geocodeWithGoogle(
 			};
 		}
 
-		return null;
+		if (data.status === "ZERO_RESULTS") return null;
+
+		throw new Error(`Google Geocoding error: ${data.status}`);
 	} catch (error) {
 		console.error("Google Geocoding error:", error);
 		throw new Error("Failed to geocode with Google API");
@@ -57,14 +68,20 @@ export async function geocodeWithNominatim(
 	const query = `${input.address}, ${input.city}, ${input.postalCode}, ${input.country}`;
 	const encodedQuery = encodeURIComponent(query);
 
-	const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodedQuery}&limit=1`;
+	const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&addressdetails=1&q=${encodedQuery}&limit=1`;
 
 	try {
 		const response = await fetch(url, {
 			headers: {
 				"User-Agent": "GeocodingComparisonApp/1.0",
+				"Accept-Language": "en",
 			},
 		});
+
+		if (!response.ok) {
+			throw new Error(`Nominatim HTTP ${response.status}`);
+		}
+
 		const data = await response.json();
 
 		if (data.length > 0) {
@@ -84,4 +101,3 @@ export async function geocodeWithNominatim(
 		throw new Error("Failed to geocode with Nominatim API");
 	}
 }
-
